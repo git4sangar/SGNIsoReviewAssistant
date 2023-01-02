@@ -152,7 +152,7 @@
        <enum>Qt::LeftToRight</enum>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="tabTeam">
        <attribute name="title">
@@ -312,6 +312,13 @@
                     </spacer>
                    </item>
                    <item>
+                    <widget class="QPushButton" name="btnProjClear">
+                     <property name="text">
+                      <string>Clear</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
                     <widget class="QPushButton" name="btnProjNew">
                      <property name="font">
                       <font>
@@ -351,6 +358,9 @@
                  </item>
                  <item>
                   <widget class="QTableWidget" name="tblWdgtProjects">
+                   <property name="alternatingRowColors">
+                    <bool>true</bool>
+                   </property>
                    <property name="selectionMode">
                     <enum>QAbstractItemView::SingleSelection</enum>
                    </property>
@@ -513,7 +523,7 @@
                    <second>0</second>
                    <year>2022</year>
                    <month>12</month>
-                   <day>29</day>
+                   <day>26</day>
                   </datetime>
                  </property>
                  <property name="displayFormat">
@@ -546,7 +556,7 @@
                    <second>0</second>
                    <year>2023</year>
                    <month>1</month>
-                   <day>11</day>
+                   <day>8</day>
                   </datetime>
                  </property>
                  <property name="displayFormat">
@@ -589,12 +599,24 @@
              </item>
              <item>
               <widget class="QTableWidget" name="tblWdgtSchdlLookup">
+               <property name="alternatingRowColors">
+                <bool>true</bool>
+               </property>
+               <property name="selectionMode">
+                <enum>QAbstractItemView::SingleSelection</enum>
+               </property>
                <property name="selectionBehavior">
                 <enum>QAbstractItemView::SelectRows</enum>
+               </property>
+               <property name="textElideMode">
+                <enum>Qt::ElideRight</enum>
                </property>
                <property name="sortingEnabled">
                 <bool>true</bool>
                </property>
+               <attribute name="horizontalHeaderStretchLastSection">
+                <bool>true</bool>
+               </attribute>
                <attribute name="verticalHeaderVisible">
                 <bool>false</bool>
                </attribute>
@@ -621,6 +643,9 @@
             <layout class="QVBoxLayout" name="verticalLayout_7">
              <item>
               <widget class="QTableWidget" name="tblWdgtSchedules">
+               <property name="alternatingRowColors">
+                <bool>true</bool>
+               </property>
                <property name="selectionBehavior">
                 <enum>QAbstractItemView::SelectRows</enum>
                </property>
@@ -677,9 +702,9 @@
           <item>
            <layout class="QVBoxLayout" name="verticalLayout_11">
             <item>
-             <layout class="QHBoxLayout" name="hzLOutProjNameAndCount" stretch="4,5,2">
+             <layout class="QHBoxLayout" name="hzLOutProjNameAndCount" stretch="0,0,0">
               <item>
-               <widget class="QComboBox" name="cmBxRvwNames">
+               <widget class="QComboBox" name="cmBxRevwNames">
                 <property name="font">
                  <font>
                   <pointsize>14</pointsize>
@@ -704,14 +729,14 @@
                </spacer>
               </item>
               <item>
-               <widget class="QLabel" name="lblRvwStatus">
+               <widget class="QLabel" name="lblRevwStatus">
                 <property name="font">
                  <font>
                   <pointsize>14</pointsize>
                  </font>
                 </property>
                 <property name="text">
-                 <string>Reviews not closed: 7</string>
+                 <string>Comments Open: 7 / 10</string>
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -721,7 +746,7 @@
              </layout>
             </item>
             <item>
-             <widget class="QLineEdit" name="lnEdtRvwComment">
+             <widget class="QLineEdit" name="lnEdtRevwComment">
               <property name="font">
                <font>
                 <pointsize>14</pointsize>
@@ -738,18 +763,6 @@
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_12">
               <item>
-               <widget class="QLabel" name="lblRvwNoOfComments">
-                <property name="font">
-                 <font>
-                  <pointsize>14</pointsize>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>No Of Comments: 10</string>
-                </property>
-               </widget>
-              </item>
-              <item>
                <spacer name="horizontalSpacer_6">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -763,7 +776,7 @@
                </spacer>
               </item>
               <item>
-               <widget class="QPushButton" name="btnRvwAdd">
+               <widget class="QPushButton" name="btnRevwAdd">
                 <property name="text">
                  <string>Add</string>
                 </property>
@@ -774,19 +787,19 @@
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_14">
               <item>
-               <widget class="QListWidget" name="lstWdgtRvwComments">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-                  <horstretch>1</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
+               <widget class="QTableWidget" name="tblWdgtCmnts">
+                <property name="alternatingRowColors">
+                 <bool>true</bool>
                 </property>
+                <attribute name="horizontalHeaderStretchLastSection">
+                 <bool>true</bool>
+                </attribute>
                </widget>
               </item>
               <item>
                <layout class="QVBoxLayout" name="verticalLayout_12">
                 <item>
-                 <widget class="QTextEdit" name="txtEdtRvwComment">
+                 <widget class="QTextEdit" name="txtEdtRevwCmnt">
                   <property name="sizePolicy">
                    <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
                     <horstretch>0</horstretch>
@@ -801,19 +814,19 @@
                  </widget>
                 </item>
                 <item>
-                 <widget class="QComboBox" name="cmBxRvwCommentStatus"/>
+                 <widget class="QComboBox" name="cmBxRevwCmntStat"/>
                 </item>
                 <item>
                  <layout class="QHBoxLayout" name="horizontalLayout_15">
                   <item>
-                   <widget class="QPushButton" name="ptnRvwDelete">
+                   <widget class="QPushButton" name="btnRevwDelete">
                     <property name="text">
                      <string>Delete</string>
                     </property>
                    </widget>
                   </item>
                   <item>
-                   <widget class="QPushButton" name="btnRvwUpdate">
+                   <widget class="QPushButton" name="btnRevwUpdate">
                     <property name="text">
                      <string>Update</string>
                     </property>

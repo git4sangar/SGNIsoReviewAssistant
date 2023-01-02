@@ -19,7 +19,6 @@ QString Cdsid::getInsertQuery() {
 }
 
 QString Team::getInsertQuery() { return ""; }
-QString Review::getInsertQuery() { return ""; }
 
 QString getQString(const json& jsRoot, const std::string& colName)
 { return QString(jsRoot.value<std::string>(colName, "").c_str()); }
@@ -44,19 +43,55 @@ Team::Ptr Team::fromJson(const json& pJson) {
     return pTeam;
 }
 
-Review::Ptr Review::fromJson(const QString& pJson) {
-    if (pJson.isEmpty()) return nullptr;
-    auto jsRoot         = json::parse(pJson.toStdString(), nullptr, false);
-    if(jsRoot.is_discarded()) return nullptr;
+//--------------------------------------------------------------------------------------------------------
+//                                              Comment {{{
+//--------------------------------------------------------------------------------------------------------
 
-    Review::Ptr pReview = std::make_shared<Review>();
-    pReview->mId        = jsRoot.value<int32_t>("id", 0);
-    pReview->mReviewId  = jsRoot.value<int32_t>("review_id", 0);
-    pReview->mStatus    = jsRoot.value<int32_t>("status", 0);
-    pReview->mComment   = getQString(jsRoot, "comment");
-    pReview->mReviewer  = getQString(jsRoot, "reviewer");
-    return pReview;
+Comment::Ptr Comment::fromJson(const json& pJson) {
+    if(pJson.is_discarded()) return nullptr;
+
+    Comment::Ptr pComment= std::make_shared<Comment>();
+    pComment->mId        = pJson.value<int32_t>("id", 0);
+    pComment->mReviewId  = pJson.value<int32_t>("review_id", 0);
+    pComment->mStatus    = pJson.value<int32_t>("status", 0);
+    pComment->mComment   = getQString(pJson, "comment");
+    pComment->mReviewer  = getQString(pJson, "reviewer");
+    return pComment;
 }
+
+QString Comment::getInsertQuery() {
+    std::stringstream ss;
+    ss  << "INSERT INTO review (review_id, status, comment, reviewer) VALUES ("
+        << mReviewId << ", " << mStatus << ", \"" << mComment.toStdString()
+        << "\", \"" << mReviewer.toStdString() << "\");";
+    return QString(ss.str().c_str());
+}
+
+//  The column names shall match cols in getFieldsAsWidgetItems
+QStringList Comment::getColNames() {
+    QStringList columnNames;
+    columnNames << "RvwId" << "CmntId" << "Comment";
+    return columnNames;
+}
+
+//  The vector size shall match column names in getColNames
+QVector<QTableWidgetItem*> Comment::getFieldsAsWidgetItems() {
+    QVector<QTableWidgetItem*> pItems;
+    QTableWidgetItem* pItem = nullptr;
+
+    pItem = new QTableWidgetItem(); pItem->setData(Qt::DisplayRole, QVariant(mReviewId));   pItems.push_back(pItem);
+    pItem = new QTableWidgetItem(); pItem->setData(Qt::DisplayRole, QVariant(mId));         pItems.push_back(pItem);
+    pItem = new QTableWidgetItem(); pItem->setText(mComment);                               pItems.push_back(pItem);
+
+    return pItems;
+}
+
+//--------------------------------------------------------------------------------------------------------
+//                                              Comment }}}
+//--------------------------------------------------------------------------------------------------------
+
+
+
 
 //--------------------------------------------------------------------------------------------------------
 //                                              Schedule {{{

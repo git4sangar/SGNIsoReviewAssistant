@@ -106,14 +106,35 @@ void DBInterface::onAllSchedules(QNetworkReply *pReply) {
         if(pSchdl) mAllSchedules.push_back(pSchdl);
     }
 
-    //mpDBPuller->start(ONE_MIN);
+    std::stringstream ss;
+    ss << "SELECT * FROM review WHERE status = " << Schedule::stringStatusToInt("Open") << " AND review_id IN "
+       << "(SELECT DISTINCT review_id FROM schedule WHERE proj_id IN "
+       << "(SELECT DISTINCT proj_id FROM project WHERE ll6 = \""
+       << mLL6Cdsid.toStdString() << "\"));";
+    QNetworkRequest request = makeSelectRequest();
+    connect(mpHttpMgr, &QNetworkAccessManager::finished, this, &DBInterface::onAllRevwCmnts);
+    mpHttpMgr->put(request, QString(ss.str().c_str()).toUtf8());
+}
+
+void DBInterface::onAllRevwCmnts(QNetworkReply *pReply) {
+    disconnect(mpHttpMgr, &QNetworkAccessManager::finished, this, &DBInterface::onAllRevwCmnts);
+
+    const auto& resp    = QString(pReply->readAll());
+    json root           = json::parse(resp.toStdString(), nullptr, false);
+    if(root.is_discarded() || root["isOk"] == false) return;
+
+    if(root["rows"].is_array()) for(const auto& row :root["rows"]) {
+        Comment::Ptr pCmnt  = Comment::fromJson(row);
+        if(pCmnt) mAllComments.push_back(pCmnt);
+    }
+
     for(int32_t iLoop = 0; iLoop < mpDBSubscribers.size(); iLoop++)
         mpDBSubscribers[iLoop]->onDBNotify();
 }
 
 QNetworkRequest DBInterface::makeSelectRequest() {
     QNetworkRequest request;
-    QString strUrl      = QString("http://68.183.84.172:8080/selectquery");
+    QString strUrl      = QString("http://UGC13R4HN83.chennaigtbc.ford.com:8080/selectquery");
     request.setUrl(QUrl(strUrl));
     return request;
 }
@@ -128,8 +149,8 @@ QNetworkRequest DBInterface::makeSelectAndUpdateReq(bool bFlag) {
     QString         strUrl;
 
     strUrl  = (bFlag) ?
-        QString("http://68.183.84.172:8080/selectsucceedupdate") :
-        QString("http://68.183.84.172:8080/selectnotupdate");
+        QString("http://UGC13R4HN83.chennaigtbc.ford.com:8080/selectsucceedupdate") :
+        QString("http://UGC13R4HN83.chennaigtbc.ford.com:8080/selectnotupdate");
     request.setUrl(QUrl(strUrl));
 
     return request;
@@ -138,7 +159,7 @@ QNetworkRequest DBInterface::makeSelectAndUpdateReq(bool bFlag) {
 //  This is a multi-update queries delimited by '$'
 QNetworkRequest DBInterface::makeUpdateRequest() {
     QNetworkRequest request;
-    QString strUrl      = QString("http://68.183.84.172:8080/sqlupdate");
+    QString strUrl      = QString("http://UGC13R4HN83.chennaigtbc.ford.com:8080/sqlupdate");
     request.setUrl(QUrl(strUrl));
     return request;
 }
@@ -147,9 +168,18 @@ const QVector<Cdsid::Ptr>&      DBInterface::getAllCdsids()     { return mAllCds
 const QVector<Project::Ptr>&    DBInterface::getAllProjects()   { return mAllProjects; }
 const QVector<Team::Ptr>&       DBInterface::getAllTeams()      { return mAllTeams; }
 const QVector<Schedule::Ptr>&   DBInterface::getAllSchedules()  { return mAllSchedules; }
+const QVector<Comment::Ptr>&    DBInterface::getAllComments()   { return mAllComments; }
 const QString&                  DBInterface::getCurUserCdsid()  { return mCurUserCdsid;}
 void                            DBInterface::triggerDBPull()    { pullFromDB(); }
 QString                         DBInterface::getLL6Cdsid()      { return mLL6Cdsid; }
+void                            DBInterface::setLL6Cdsid(const QString& pLL6Cdsid) { mLL6Cdsid = pLL6Cdsid; }
+
+
+Schedule::Ptr DBInterface::getScheduleByIndex(int32_t idx) {
+    Schedule::Ptr pSchdl;
+    if(idx < mAllSchedules.size()) pSchdl = mAllSchedules[idx];
+    return pSchdl;
+}
 
 bool DBInterface::isValidCdsid(const QString& cdsid) {
     if(cdsid.isEmpty()) return false;

@@ -46,7 +46,6 @@ private slots:
 
 public:
     typedef std::shared_ptr<SchedulePage> Ptr;
-    SchedulePage() {}
     SchedulePage(SchdlUiElements *pUi, DBInterface::Ptr pDB);
     virtual ~SchedulePage() {}
     //std::shared_ptr<SchedulePage> getSharedPtr() {return shared_from_this();}

@@ -148,8 +148,12 @@ void ProjectPage::clearProjDetails() {
     ui->lnEdtProjName->clear();
     ui->lnEdtProjId->clear();
     ui->lnEdtProjPM->clear();
-    ui->lnEdtProjLL6->setText(ui->lnEdtProjLL6->text());
+    ui->lnEdtProjLL6->setText(mpDB->getLL6Cdsid());
     ui->txtEdtCdsids->clear();
+}
+
+void ProjectPage::onBtnProjClear() {
+    clearProjDetails();
 }
 
 Project::Ptr ProjectPage::sanityCheck() {

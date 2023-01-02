@@ -31,6 +31,8 @@ set(PROJECT_SOURCES
         projectpage.cpp
         schedulepage.h
         schedulepage.cpp
+        reviewpage.h
+        reviewpage.cpp
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)

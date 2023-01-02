@@ -24,6 +24,7 @@ class DBInterface : public QObject
     QVector<Project::Ptr>   mAllProjects;
     QVector<Team::Ptr>      mAllTeams;
     QVector<Schedule::Ptr>  mAllSchedules;
+    QVector<Comment::Ptr>   mAllComments;
     QString                 mCurUserCdsid, mLL6Cdsid;
     QNetworkAccessManager   *mpHttpMgr;
     QVector<DBNotifier::Ptr> mpDBSubscribers;
@@ -33,6 +34,7 @@ private slots:
     void onAllProjects(QNetworkReply *pReply);
     void onAllTeams(QNetworkReply *pReply);
     void onAllSchedules(QNetworkReply *pReply);
+    void onAllRevwCmnts(QNetworkReply *pReply);
     void pullFromDB();
 
 public:
@@ -44,6 +46,8 @@ public:
     const QVector<Project::Ptr>&    getAllProjects();
     const QVector<Team::Ptr>&       getAllTeams();
     const QVector<Schedule::Ptr>&   getAllSchedules();
+    const QVector<Comment::Ptr>&    getAllComments();
+    Schedule::Ptr                   getScheduleByIndex(int32_t idx);
 
     const QString&                  getCurUserCdsid();
     void                            triggerDBPull();
@@ -54,6 +58,7 @@ public:
     bool                            isValidAuditee(const QString& pAuditee, const QString& strProjId);
     QString                         getProjName(const QString& strProjId);
     QString                         getLL6Cdsid();
+    void                            setLL6Cdsid(const QString& pLL6Cdsid);
     QNetworkRequest                 makeSelectRequest();
     QNetworkRequest                 makeUpdateRequest();
     QNetworkRequest                 makeSelectAndUpdateReq(bool bFlag);

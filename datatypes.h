@@ -29,13 +29,15 @@ struct Team {
     QString     getInsertQuery();
 };
 
-struct Review {
-    typedef     std::shared_ptr<Review> Ptr;
+struct Comment {
+    typedef     std::shared_ptr<Comment> Ptr;
     int32_t     mId, mReviewId, mStatus;
     QString     mComment, mReviewer;
 
-    static Ptr  fromJson(const QString& pJson);
-    QString     getInsertQuery();
+    static Ptr                  fromJson(const json& pJson);
+    static QStringList          getColNames();
+    QVector<QTableWidgetItem*>  getFieldsAsWidgetItems();
+    QString                     getInsertQuery();
 };
 
 struct Schedule {

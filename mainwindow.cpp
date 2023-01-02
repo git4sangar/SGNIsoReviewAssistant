@@ -30,6 +30,8 @@ MainWindow::MainWindow(QWidget *parent)
     mpDB->subscribeToDBNotification(mpProjPage);
     mpSchdlPage     = std::make_shared<SchedulePage>(prepareSchdlUIElements(), mpDB);
     mpDB->subscribeToDBNotification(mpSchdlPage);
+    mpRevwPage      = std::make_shared<ReviewPage>(prepareRevwUIElements(), mpDB);
+    mpDB->subscribeToDBNotification(mpRevwPage);
     mpDB->triggerDBPull();
 
     const auto tblVHeader = ui->tblWdgtProjects->verticalHeader();
@@ -38,6 +40,11 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow() {
     delete ui;
+}
+
+void MainWindow::on_lnEdtLL6_textChanged(const QString &arg1) {
+    if(mpDB->isValidCdsid(arg1)) mpDB->setLL6Cdsid(arg1);
+    else mpStatusUpdater->updateStatus("Invalid LL6 cdsid");
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -66,6 +73,7 @@ void MainWindow::on_btnProjGetDetails_clicked() { mpProjPage->onBtnProjGetDetail
 void MainWindow::on_tblWdgtProjects_cellClicked(int row, int column) { mpProjPage->onTblWdgtProjectsClicked(row, column); }
 void MainWindow::on_tblWdgtProjects_vHeaderClicked(int index) { mpProjPage->onTblWdgtVHeaderClicked(index); }
 void MainWindow::on_btnProjDelete_clicked() { mpProjPage->onBtnProjDeleteClicked(); }
+void MainWindow::on_btnProjClear_clicked() { mpProjPage->onBtnProjClear(); }
 
 //--------------------------------------------------------------------------------------------------------
 //                          Project and Team Page }}}
@@ -97,7 +105,7 @@ SchdlUiElements* MainWindow::prepareSchdlUIElements() {
     return pUi;
 }
 
-void MainWindow::on_btnSchdlNew_clicked() { mpSchdlPage->onBtnSchdlNewClicked(); }
+void MainWindow::on_btnSchdlNew_clicked()    { mpSchdlPage->onBtnSchdlNewClicked(); }
 void MainWindow::on_btnSchdlUpdate_clicked() { mpSchdlPage->onBtnSchdlUpdateClicked(); }
 void MainWindow::on_btnSchdlDelete_clicked() { mpSchdlPage->onBtnSchdlDeleteClicked(); }
 void MainWindow::on_btnSchdlRemind_clicked() { mpSchdlPage->onBtnSchdlRemindClicked(); }
@@ -105,6 +113,37 @@ void MainWindow::on_tblWdgtSchdlLookup_cellClicked(int row, int column) { mpSchd
 void MainWindow::on_tblWdgtSchedules_cellClicked(int row, int column) { mpSchdlPage->onTblWdgtSchedulesClicked(row, column); }
 //--------------------------------------------------------------------------------------------------------
 //                          Schedule Page }}}
+//--------------------------------------------------------------------------------------------------------
+
+
+
+//--------------------------------------------------------------------------------------------------------
+//                          Review Page {{{
+//--------------------------------------------------------------------------------------------------------
+
+ReviewUiElements* MainWindow::prepareRevwUIElements() {
+    ReviewUiElements *pUi   = new ReviewUiElements();
+    pUi->cmBxRevwNames      = ui->cmBxRevwNames;
+    pUi->cmBxRevwCmntStat   = ui->cmBxRevwCmntStat;
+    pUi->lblRevwStatus      = ui->lblRevwStatus;
+    pUi->lnEdtRevwComment   = ui->lnEdtRevwComment;
+    pUi->btnRevwAdd         = ui->btnRevwAdd;
+    pUi->btnRevwDelete      = ui->btnRevwDelete;
+    pUi->btnRevwUpdate      = ui->btnRevwUpdate;
+    pUi->tblWdgtCmnts       = ui->tblWdgtCmnts;
+    pUi->txtEdtRevwCmnt     = ui->txtEdtRevwCmnt;
+    pUi->statusUpdater      = mpStatusUpdater;
+    return pUi;
+}
+
+void MainWindow::on_btnRevwAdd_clicked()    { mpRevwPage->onBtnRevwAddClicked(); }
+void MainWindow::on_btnRevwUpdate_clicked() { mpRevwPage->onBtnRevwUpdateClicked(); }
+void MainWindow::on_btnRevwDelete_clicked() { mpRevwPage->onBtnRevwDeleteClicked(); }
+void MainWindow::on_cmBxRevwNames_currentIndexChanged(int index)    { mpRevwPage->onCmBxRevwNamesIdxChanged(index); }
+void MainWindow::on_cmBxRevwCmntStat_currentIndexChanged(int index) { mpRevwPage->onCmBxRevwCmntStatChanged(index); }
+void MainWindow::on_tblWdgtCmnts_cellClicked(int row, int col)      { mpRevwPage->onTblWdgtCmntsClicked(row, col); }
+//--------------------------------------------------------------------------------------------------------
+//                          Review Page }}}
 //--------------------------------------------------------------------------------------------------------
 
 

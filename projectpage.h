@@ -59,6 +59,7 @@ public:
     void onTblWdgtProjectsClicked(int row, int column = 0);
     void onTblWdgtVHeaderClicked(int index);
     void onBtnProjDeleteClicked();
+    void onBtnProjClear();
     void onDBNotify();
 
 private:
