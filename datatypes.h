@@ -37,6 +37,7 @@ struct Comment {
     static Ptr                  fromJson(const json& pJson);
     static QStringList          getColNames();
     QVector<QTableWidgetItem*>  getFieldsAsWidgetItems();
+    QString                     getUpdateQuery(Comment::Ptr pCmnt);
     QString                     getInsertQuery();
 };
 

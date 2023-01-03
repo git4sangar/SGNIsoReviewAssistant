@@ -47,6 +47,8 @@ public:
     const QVector<Team::Ptr>&       getAllTeams();
     const QVector<Schedule::Ptr>&   getAllSchedules();
     const QVector<Comment::Ptr>&    getAllComments();
+    QVector<Comment::Ptr>           getCommentsByRevwId(int32_t pId);
+    Comment::Ptr                    getCommentById(int32_t pId);
     Schedule::Ptr                   getScheduleByIndex(int32_t idx);
 
     const QString&                  getCurUserCdsid();

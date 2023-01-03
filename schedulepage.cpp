@@ -101,6 +101,10 @@ void SchedulePage::onTblWdgtSchedulesClicked(int row, int column) {
     }
 }
 
+void SchedulePage::onTblWdgtVHeaderClicked(int index) {
+    onTblWdgtSchedulesClicked(index);
+}
+
 void SchedulePage::onBtnSchdlUpdateClicked() {
          if(ui->btnSchdlUpdate->text() == "Submit") insertNewSchedule();
     else if(ui->btnSchdlUpdate->text() == "Update") updateSchedule();

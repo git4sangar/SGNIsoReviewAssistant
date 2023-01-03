@@ -44,11 +44,12 @@ public:
     void onBtnRevwDeleteClicked();
     void onCmBxRevwNamesIdxChanged(int index);
     void onCmBxRevwCmntStatChanged(int index);
-    void onTblWdgtCmntsClicked(int row, int col);
+    void onTblWdgtCmntsClicked(int row, int col = 0);
+    void onTblWdgtVHeaderClicked(int index);
     void onDBNotify();
 
 private:
-    void            populateCommentsTable(const QVector<Comment::Ptr>& cmnts);
+    void            populateCommentsTable(int32_t iRevwId);
     void            clearCommentsTable();
     void            populateReviewList();
 

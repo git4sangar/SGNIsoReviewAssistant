@@ -26,7 +26,7 @@ void DBInterface::subscribeToDBNotification(DBNotifier::Ptr pSubscriber) {
 
 void DBInterface::pullFromDB() {
     mpDBPuller->stop();
-    mAllProjects.clear(); mAllTeams.clear(); mAllSchedules.clear();
+    mAllProjects.clear(); mAllTeams.clear(); mAllSchedules.clear(); mAllComments.clear();
     QNetworkRequest request = makeSelectRequest();
     connect(mpHttpMgr, &QNetworkAccessManager::finished, this, &DBInterface::onAllCdsids);
     mpHttpMgr->put(request, QString("SELECT * FROM cdsids;").toUtf8());
@@ -107,7 +107,7 @@ void DBInterface::onAllSchedules(QNetworkReply *pReply) {
     }
 
     std::stringstream ss;
-    ss << "SELECT * FROM review WHERE status = " << Schedule::stringStatusToInt("Open") << " AND review_id IN "
+    ss << "SELECT * FROM review WHERE review_id IN "
        << "(SELECT DISTINCT review_id FROM schedule WHERE proj_id IN "
        << "(SELECT DISTINCT proj_id FROM project WHERE ll6 = \""
        << mLL6Cdsid.toStdString() << "\"));";
@@ -174,10 +174,28 @@ void                            DBInterface::triggerDBPull()    { pullFromDB(); 
 QString                         DBInterface::getLL6Cdsid()      { return mLL6Cdsid; }
 void                            DBInterface::setLL6Cdsid(const QString& pLL6Cdsid) { mLL6Cdsid = pLL6Cdsid; }
 
+Comment::Ptr DBInterface::getCommentById(int32_t pId) {
+    Comment::Ptr pCmnt;
+    for(int32_t iLoop = 0; iLoop < mAllComments.size(); iLoop++) {
+        pCmnt = mAllComments[iLoop];
+        if(pCmnt->mId == pId) return pCmnt;
+    }
+    return nullptr;
+}
+
+QVector<Comment::Ptr> DBInterface::getCommentsByRevwId(int32_t pRevwId) {
+    QVector<Comment::Ptr> comments;
+    const auto& allCmnts= getAllComments();
+    for(int32_t iLoop = 0; iLoop < allCmnts.size(); iLoop++) {
+        if(pRevwId == allCmnts[iLoop]->mReviewId)
+            comments.push_back(allCmnts[iLoop]);
+    }
+    return comments;
+}
 
 Schedule::Ptr DBInterface::getScheduleByIndex(int32_t idx) {
     Schedule::Ptr pSchdl;
-    if(idx < mAllSchedules.size()) pSchdl = mAllSchedules[idx];
+    if(idx >= 0 && idx < mAllSchedules.size()) pSchdl = mAllSchedules[idx];
     return pSchdl;
 }
 

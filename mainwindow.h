@@ -40,6 +40,7 @@ private slots:
     void on_btnSchdlRemind_clicked();
     void on_tblWdgtSchdlLookup_cellClicked(int row, int column);
     void on_tblWdgtSchedules_cellClicked(int row, int column);
+    void on_tblWdgtSchedules_vHeaderClicked(int index);
 
     void on_btnRevwAdd_clicked();
     void on_btnRevwUpdate_clicked();
@@ -47,6 +48,7 @@ private slots:
     void on_cmBxRevwNames_currentIndexChanged(int index);
     void on_cmBxRevwCmntStat_currentIndexChanged(int index);
     void on_tblWdgtCmnts_cellClicked(int row, int column);
+    void on_tblWdgtCmnts_vHeaderClicked(int index);
 
 private:
     Ui::MainWindow          *ui;

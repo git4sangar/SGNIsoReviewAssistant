@@ -72,6 +72,8 @@ void ProjectPage::updateProject() {
     Project::Ptr pToChange  = sanityCheck();
     if(!pToChange) return;
     Project::Ptr pExisting  = mProjs[mCurRowIndex];
+    if(pExisting->mPM != mpDB->getCurUserCdsid() && pExisting->mLL6 != mpDB->getCurUserCdsid())
+        { ui->statusUpdater->updateStatus("Only PM or LL6 can update"); return; }
 
     std::stringstream ss;
     std::string delimiter   = "$";

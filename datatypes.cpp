@@ -86,6 +86,15 @@ QVector<QTableWidgetItem*> Comment::getFieldsAsWidgetItems() {
     return pItems;
 }
 
+QString Comment::getUpdateQuery(Comment::Ptr pCmnt) {
+    std::string strComment  = pCmnt->mComment.toStdString();
+    int32_t iStatus         = pCmnt->mStatus;
+    std::stringstream ss;
+    ss  << "UPDATE review SET comment = \"" << strComment << "\", status = " << iStatus
+        << " WHERE id = " << mId << ";";
+    return QString(ss.str().c_str());
+}
+
 //--------------------------------------------------------------------------------------------------------
 //                                              Comment }}}
 //--------------------------------------------------------------------------------------------------------

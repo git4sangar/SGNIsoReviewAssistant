@@ -26,6 +26,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     mpDB            = std::make_shared<DBInterface>(curUserCdsid, ui->lnEdtLL6->text());
     mpStatusUpdater = new StatusUpdater(ui->lblStatus);
+
     mpProjPage      = std::make_shared<ProjectPage>(prepareProjUIElements(), mpDB);
     mpDB->subscribeToDBNotification(mpProjPage);
     mpSchdlPage     = std::make_shared<SchedulePage>(prepareSchdlUIElements(), mpDB);
@@ -34,8 +35,14 @@ MainWindow::MainWindow(QWidget *parent)
     mpDB->subscribeToDBNotification(mpRevwPage);
     mpDB->triggerDBPull();
 
-    const auto tblVHeader = ui->tblWdgtProjects->verticalHeader();
-    connect(tblVHeader, &QHeaderView::sectionClicked, this, &MainWindow::on_tblWdgtProjects_vHeaderClicked);
+    const auto tblVHeaderProj = ui->tblWdgtProjects->verticalHeader();
+    connect(tblVHeaderProj, &QHeaderView::sectionClicked, this, &MainWindow::on_tblWdgtProjects_vHeaderClicked);
+
+    const auto tblVHeaderSchdl= ui->tblWdgtSchedules->verticalHeader();
+    connect(tblVHeaderSchdl, &QHeaderView::sectionClicked, this, &MainWindow::on_tblWdgtSchedules_vHeaderClicked);
+
+    const auto tblVHeaderCmnt = ui->tblWdgtCmnts->verticalHeader();
+    connect(tblVHeaderCmnt, &QHeaderView::sectionClicked, this, &MainWindow::on_tblWdgtCmnts_vHeaderClicked);
 }
 
 MainWindow::~MainWindow() {
@@ -111,6 +118,7 @@ void MainWindow::on_btnSchdlDelete_clicked() { mpSchdlPage->onBtnSchdlDeleteClic
 void MainWindow::on_btnSchdlRemind_clicked() { mpSchdlPage->onBtnSchdlRemindClicked(); }
 void MainWindow::on_tblWdgtSchdlLookup_cellClicked(int row, int column) { mpSchdlPage->onTblWdgtSchdlLookupClicked(row, column); }
 void MainWindow::on_tblWdgtSchedules_cellClicked(int row, int column) { mpSchdlPage->onTblWdgtSchedulesClicked(row, column); }
+void MainWindow::on_tblWdgtSchedules_vHeaderClicked(int index) { mpSchdlPage->onTblWdgtVHeaderClicked(index); }
 //--------------------------------------------------------------------------------------------------------
 //                          Schedule Page }}}
 //--------------------------------------------------------------------------------------------------------
@@ -142,6 +150,7 @@ void MainWindow::on_btnRevwDelete_clicked() { mpRevwPage->onBtnRevwDeleteClicked
 void MainWindow::on_cmBxRevwNames_currentIndexChanged(int index)    { mpRevwPage->onCmBxRevwNamesIdxChanged(index); }
 void MainWindow::on_cmBxRevwCmntStat_currentIndexChanged(int index) { mpRevwPage->onCmBxRevwCmntStatChanged(index); }
 void MainWindow::on_tblWdgtCmnts_cellClicked(int row, int col)      { mpRevwPage->onTblWdgtCmntsClicked(row, col); }
+void MainWindow::on_tblWdgtCmnts_vHeaderClicked(int index)          { mpRevwPage->onTblWdgtVHeaderClicked(index); }
 //--------------------------------------------------------------------------------------------------------
 //                          Review Page }}}
 //--------------------------------------------------------------------------------------------------------

@@ -56,6 +56,7 @@ public:
     void onBtnSchdlRemindClicked();
     void onTblWdgtSchdlLookupClicked(int row, int column = 0);
     void onTblWdgtSchedulesClicked(int row, int column = 0);
+    void onTblWdgtVHeaderClicked(int index);
     void populateSchdlTable();
     void onDBNotify();
 
