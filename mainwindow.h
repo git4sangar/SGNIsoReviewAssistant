@@ -25,6 +25,7 @@ public:
 
 private slots:
     void on_lnEdtLL6_textChanged(const QString &arg1);
+    void on_tbWdgtMain_currentChanged(int index);
 
     void on_btnProjSubmit_clicked();
     void on_btnProjNew_clicked();
@@ -38,6 +39,7 @@ private slots:
     void on_btnSchdlUpdate_clicked();
     void on_btnSchdlDelete_clicked();
     void on_btnSchdlRemind_clicked();
+    void on_btnSchdlArchive_clicked();
     void on_tblWdgtSchdlLookup_cellClicked(int row, int column);
     void on_tblWdgtSchedules_cellClicked(int row, int column);
     void on_tblWdgtSchedules_vHeaderClicked(int index);

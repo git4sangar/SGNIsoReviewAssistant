@@ -31,6 +31,7 @@ struct SchdlUiElements {
     QPushButton     *btnSchdlNew        = nullptr,
                     *btnSchdlUpdate     = nullptr,
                     *btnSchdlDelete     = nullptr,
+                    *btnSchdlArchive    = nullptr,
                     *btnSchdlRemind     = nullptr;
     QTableWidget    *tblWdgtSchedules   = nullptr,
                     *tblWdgtSchdlLookup = nullptr;
@@ -54,11 +55,13 @@ public:
     void onBtnSchdlUpdateClicked();
     void onBtnSchdlDeleteClicked();
     void onBtnSchdlRemindClicked();
+    void onBtnSchdlArchiveClicked();
     void onTblWdgtSchdlLookupClicked(int row, int column = 0);
     void onTblWdgtSchedulesClicked(int row, int column = 0);
     void onTblWdgtVHeaderClicked(int index);
     void populateSchdlTable();
-    void onDBNotify();
+    void onDBNotify(int32_t pUserInt = 0, const QString& pUserStr = QString());
+    void listenToDBUpdate(bool bFlag) { mbEyeOnDBUpdate = bFlag; }
 
 private:
     int32_t                 mCurRowIndex;

@@ -12,8 +12,6 @@ StatusUpdater::StatusUpdater(QLabel *lbl)
 }
 
 void StatusUpdater::updateStatus(const QString& pStatus, int delay) {
-    if(pStatus.isEmpty()) return;
-
     mpStatusTimer->stop();
     mpLblStatus->setText(pStatus);
     mpStatusTimer->start(delay);

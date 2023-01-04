@@ -114,11 +114,12 @@ Schedule::Ptr Schedule::fromJson(const json& pJson) {
     pSchedule->mReviewId    = pJson.value<int32_t>("review_id", 0);
     pSchedule->mProjId      = pJson.value<int32_t>("proj_id", 0);
     pSchedule->mStatus      = pJson.value<int32_t>("status", 0);
+    pSchedule->mIsArchived  = pJson.value<int32_t>("is_archived", 0);
 
-    pSchedule->mStartDate   = pJson.value<int64_t>("start_date", 0);
-    pSchedule->mEndDate     = pJson.value<int64_t>("end_date", 0);
-    pSchedule->mActualDate  = pJson.value<int64_t>("actual_date", 0);
-    pSchedule->mCloseDate   = pJson.value<int64_t>("close_date", 0);
+    pSchedule->mStartDate   = getQString(pJson, "start_date");
+    pSchedule->mEndDate     = getQString(pJson, "end_date");
+    pSchedule->mActualDate  = getQString(pJson, "actual_date");
+    pSchedule->mCloseDate   = getQString(pJson, "close_date");
 
     pSchedule->mReviewName  = getQString(pJson, "review_name");
     pSchedule->mReviewer    = getQString(pJson, "reviewer");
@@ -134,9 +135,9 @@ QString Schedule::getInsertQuery() {
                 strReviewer     = mReviewer.toStdString(),      strScheduler= mScheduler.toStdString();
 
     std::stringstream ss;
-    ss  << "INSERT INTO schedule (review_id, proj_id, status, start_date, end_date, actual_date, close_date"
+    ss  << "INSERT INTO schedule (review_id, proj_id, status, is_archived, start_date, end_date, actual_date, close_date"
         << ", review_name, auditee, reviewer, scheduler) "
-        << "SELECT COALESCE(MAX(id), 0) + 1, " << mProjId << ", 0, \"" << strStartDate << "\", \""
+        << "SELECT COALESCE(MAX(id), 0) + 1, " << mProjId << ", 0, 0, \"" << strStartDate << "\", \""
         << strEndDate << "\", \"" << strActualDate << "\", \"" << strCloseDate << "\", \"" << strReviewName
         << "\", \"" << strAuditee << "\", \"" << strReviewer << "\", \"" << strScheduler << "\" FROM schedule;";
     return QString(ss.str().c_str());
@@ -156,7 +157,7 @@ QString Schedule::getUpdateQuery(Schedule::Ptr pSchdl) {
 //  The column names shall match cols in getFieldsAsWidgetItems
 QStringList Schedule::getColNames() {
     QStringList columnNames;
-    columnNames << "Review Id" << "Review Name" << "Reviewer" << "Auditee" << "Status";
+    columnNames << "Review Id" << "Review Name" << "Scheduled By" << "Reviewer" << "Auditee" << "Status";
     return columnNames;
 }
 
@@ -168,6 +169,7 @@ QVector<QTableWidgetItem*> Schedule::getFieldsAsWidgetItems() {
     QString strStatus   = intStatusToString(mStatus);
     pItem = new QTableWidgetItem(); pItem->setData(Qt::DisplayRole, QVariant(mReviewId)); pItems.push_back(pItem);
     pItem = new QTableWidgetItem(); pItem->setText(mReviewName);pItems.push_back(pItem);
+    pItem = new QTableWidgetItem(); pItem->setText(mScheduler); pItems.push_back(pItem);
     pItem = new QTableWidgetItem(); pItem->setText(mReviewer);  pItems.push_back(pItem);
     pItem = new QTableWidgetItem(); pItem->setText(mAuditee);   pItems.push_back(pItem);
     pItem = new QTableWidgetItem(); pItem->setText(strStatus);  pItems.push_back(pItem);
@@ -239,8 +241,6 @@ QVector<QTableWidgetItem*> Project::getFieldsAsWidgetItems() {
 QString Project::getInsertQuery() {
     std::string delimiter = "$";
     std::stringstream ss;
-    ss  << "SELECT * FROM project WHERE proj_id = " << mProjId << ";";
-    ss  << delimiter;
     ss  << "INSERT INTO project (proj_id, name, pm, ll6, iso_spoc) VALUES ("
         << mProjId << ", \"" << mName.toStdString() << "\", \"" << mPM.toStdString()
         << "\", \"" << mLL6.toStdString() << "\", \"" << mIsoSpoc.toStdString() << "\");";

@@ -33,7 +33,7 @@ class ReviewPage : public QObject, virtual public DBNotifier
     Q_OBJECT
 
 private slots:
-    void    respInsertCmnt(QNetworkReply *pReply);
+    void    respInsrtUpdtDel(QNetworkReply *pReply);
 public:
     typedef std::shared_ptr<ReviewPage> Ptr;
     ReviewPage(ReviewUiElements *pUi, DBInterface::Ptr pDB);
@@ -46,12 +46,14 @@ public:
     void onCmBxRevwCmntStatChanged(int index);
     void onTblWdgtCmntsClicked(int row, int col = 0);
     void onTblWdgtVHeaderClicked(int index);
-    void onDBNotify();
+    void onDBNotify(int32_t pUserInt = 0, const QString& pUserStr = QString());
+    void listenToDBUpdate(bool bFlag) { mbEyeOnDBUpdate = bFlag; }
 
 private:
     void            populateCommentsTable(int32_t iRevwId);
     void            clearCommentsTable();
     void            populateReviewList();
+    void            updateReviewStatus(int32_t iRevwId);
 
     int32_t                 mCurRowIndex, mCurSchdlIndex;
     bool                    mbEyeOnDBUpdate, mIsReviewer, mIsAuditee;

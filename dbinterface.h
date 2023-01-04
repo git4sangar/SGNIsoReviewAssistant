@@ -50,6 +50,7 @@ public:
     QVector<Comment::Ptr>           getCommentsByRevwId(int32_t pId);
     Comment::Ptr                    getCommentById(int32_t pId);
     Schedule::Ptr                   getScheduleByIndex(int32_t idx);
+    std::string                     getNameForCdsid(const QString& pCdsid);
 
     const QString&                  getCurUserCdsid();
     void                            triggerDBPull();

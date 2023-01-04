@@ -3,7 +3,11 @@
 #include <iostream>
 #include <sstream>
 #include <QString>
+#include <QTextStream>
+#include <QProcess>
 #include <QDate>
+#include <QDir>
+#include <QFile>
 #include <QTableWidgetItem>
 
 #include "schedulepage.h"
@@ -11,7 +15,7 @@
 SchedulePage::SchedulePage(SchdlUiElements *pUi, DBInterface::Ptr pDB)
     : QObject(nullptr)
     , mCurRowIndex(-1)
-    , mbEyeOnDBUpdate(true)
+    , mbEyeOnDBUpdate(false)
     , ui(pUi)
     , mpDB(pDB)
     , mpHttpMgr(new QNetworkAccessManager()) {
@@ -41,13 +45,6 @@ void SchedulePage::populateDORFLookupTable() {
     }
 }
 
-void SchedulePage::clearSchdlTable() {
-    ui->tblWdgtSchedules->setRowCount(0);
-    ui->tblWdgtSchedules->setColumnCount(0);
-    ui->tblWdgtSchedules->clear();
-    mCurRowIndex = -1;
-}
-
 void SchedulePage::populateSchdlTable() {
     clearSchdlTable();
     const auto& pSchdls = mpDB->getAllSchedules();
@@ -72,6 +69,77 @@ void SchedulePage::onBtnSchdlNewClicked() {
     ui->btnSchdlUpdate->setText("Submit");
     ui->lnEdtSchdlRevwName->setText(QDate().currentDate().toString("yyyy-MM")+"_ReviewName");
     ui->statusUpdater->updateStatus("Pls Enter all schedule details & click submit");
+}
+
+void SchedulePage::onBtnSchdlUpdateClicked() {
+         if(ui->btnSchdlUpdate->text() == "Submit") insertNewSchedule();
+    else if(ui->btnSchdlUpdate->text() == "Update") updateSchedule();
+}
+
+void SchedulePage::insertNewSchedule() {
+    Schedule::Ptr pSchdl    = sanityCheck();
+    if(!pSchdl) return;
+
+    QNetworkRequest request = mpDB->makeUpdateRequest();
+    connect(mpHttpMgr, &QNetworkAccessManager::finished, this, &SchedulePage::respInsertUpdateSchdl);
+    mpHttpMgr->put(request, pSchdl->getInsertQuery().toUtf8());
+}
+
+void SchedulePage::updateSchedule() {
+    if(mCurRowIndex == -1) {ui->statusUpdater->updateStatus("Pls choose a schedule"); return;}
+    Schedule::Ptr pToChange = sanityCheck();
+    if(!pToChange) return;
+    Schedule::Ptr pExisting = mpDB->getAllSchedules()[mCurRowIndex];
+
+    QNetworkRequest request = mpDB->makeUpdateRequest();
+    connect(mpHttpMgr, &QNetworkAccessManager::finished, this, &SchedulePage::respInsertUpdateSchdl);
+    mpHttpMgr->put(request, pExisting->getUpdateQuery(pToChange).toUtf8());
+}
+
+void SchedulePage::onBtnSchdlArchiveClicked() {
+    if(mCurRowIndex == -1) {
+        ui->statusUpdater->updateStatus("Pls choose a Schedule to archive");
+        return;
+    }
+
+    QString curUser     = mpDB->getCurUserCdsid();
+    Schedule::Ptr pSchdl= mpDB->getAllSchedules()[mCurRowIndex];
+    if(pSchdl->mScheduler != curUser || pSchdl->mStatus != Schedule::stringStatusToInt("Closed")) {
+        ui->statusUpdater->updateStatus(pSchdl->mScheduler + " alone can archive this that too after CLOSED");
+        return;
+    }
+
+    std::string delimiter = "$";
+    std::stringstream ss;
+    ss  << "SELECT * FROM schedule WHERE review_id = " << pSchdl->mReviewId << ";"
+        << delimiter
+        << "UPDATE schedule SET is_archived = 1 WHERE review_id = " << pSchdl->mReviewId << ";";
+    QNetworkRequest request = mpDB->makeSelectAndUpdateReq(true);
+    connect(mpHttpMgr, &QNetworkAccessManager::finished, this, &SchedulePage::respInsertUpdateSchdl);
+    mpHttpMgr->put(request, QString(ss.str().c_str()).toUtf8());
+}
+
+void SchedulePage::onBtnSchdlDeleteClicked() {
+    if(mCurRowIndex == -1) {
+        ui->statusUpdater->updateStatus("Pls choose a Schedule to delete");
+        return;
+    }
+
+    QString curUser     = mpDB->getCurUserCdsid();
+    Schedule::Ptr pSchdl= mpDB->getAllSchedules()[mCurRowIndex];
+    if(pSchdl->mScheduler != curUser) {
+        ui->statusUpdater->updateStatus("Only Scheduler can delete");
+        return;
+    }
+
+    std::string delimiter = "$";
+    std::stringstream ss;
+    ss  << "SELECT * FROM schedule WHERE review_id = " << pSchdl->mReviewId << ";"
+        << delimiter
+        << "DELETE FROM schedule WHERE review_id = " << pSchdl->mReviewId << ";";
+    QNetworkRequest request = mpDB->makeSelectAndUpdateReq(true);
+    connect(mpHttpMgr, &QNetworkAccessManager::finished, this, &SchedulePage::respInsertUpdateSchdl);
+    mpHttpMgr->put(request, QString(ss.str().c_str()).toUtf8());
 }
 
 void SchedulePage::onTblWdgtSchdlLookupClicked(int row, int column) {
@@ -100,60 +168,6 @@ void SchedulePage::onTblWdgtSchedulesClicked(int row, int column) {
         ui->btnSchdlUpdate->setText("Update");
     }
 }
-
-void SchedulePage::onTblWdgtVHeaderClicked(int index) {
-    onTblWdgtSchedulesClicked(index);
-}
-
-void SchedulePage::onBtnSchdlUpdateClicked() {
-         if(ui->btnSchdlUpdate->text() == "Submit") insertNewSchedule();
-    else if(ui->btnSchdlUpdate->text() == "Update") updateSchedule();
-}
-
-void SchedulePage::insertNewSchedule() {
-    Schedule::Ptr pSchdl    = sanityCheck();
-    if(!pSchdl) return;
-
-    QNetworkRequest request = mpDB->makeUpdateRequest();
-    connect(mpHttpMgr, &QNetworkAccessManager::finished, this, &SchedulePage::respInsertUpdateSchdl);
-    mpHttpMgr->put(request, pSchdl->getInsertQuery().toUtf8());
-}
-
-void SchedulePage::updateSchedule() {
-    if(mCurRowIndex == -1) {ui->statusUpdater->updateStatus("Pls choose a schedule"); return;}
-    Schedule::Ptr pToChange = sanityCheck();
-    if(!pToChange) return;
-    Schedule::Ptr pExisting = mpDB->getAllSchedules()[mCurRowIndex];
-
-    QNetworkRequest request = mpDB->makeUpdateRequest();
-    connect(mpHttpMgr, &QNetworkAccessManager::finished, this, &SchedulePage::respInsertUpdateSchdl);
-    mpHttpMgr->put(request, pExisting->getUpdateQuery(pToChange).toUtf8());
-}
-
-void SchedulePage::onBtnSchdlDeleteClicked() {
-    if(mCurRowIndex == -1) {
-        ui->statusUpdater->updateStatus("Pls choose a Schedule to delete");
-        return;
-    }
-
-    QString curUser     = mpDB->getCurUserCdsid();
-    Schedule::Ptr pSchdl= mpDB->getAllSchedules()[mCurRowIndex];
-    if(pSchdl->mScheduler != curUser) {
-        ui->statusUpdater->updateStatus("Only Scheduler can delete");
-        return;
-    }
-
-    std::string delimiter = "$";
-    std::stringstream ss;
-    ss  << "SELECT * FROM schedule WHERE review_id = " << pSchdl->mReviewId << ";"
-        << delimiter
-        << "DELETE FROM schedule WHERE review_id = " << pSchdl->mReviewId << ";";
-    QNetworkRequest request = mpDB->makeSelectAndUpdateReq(true);
-    connect(mpHttpMgr, &QNetworkAccessManager::finished, this, &SchedulePage::respInsertUpdateSchdl);
-    mpHttpMgr->put(request, QString(ss.str().c_str()).toUtf8());
-}
-
-void SchedulePage::onBtnSchdlRemindClicked() {}
 
 Schedule::Ptr SchedulePage::sanityCheck() {
     Schedule::Ptr pSchdl;
@@ -197,9 +211,57 @@ Schedule::Ptr SchedulePage::sanityCheck() {
 }
 
 void SchedulePage::clearScheduleDetails() {
+    ui->lnEdtSchdlRevwName->clear();
     ui->lnEdtSchdlProjId->clear();
     ui->lnEdtSchdlReviewer->clear();
     ui->lnEdtSchdlAuditee->clear();
+}
+
+void SchedulePage::clearSchdlTable() {
+    ui->tblWdgtSchedules->setRowCount(0);
+    ui->tblWdgtSchedules->setColumnCount(0);
+    ui->tblWdgtSchedules->clear();
+    mCurRowIndex = -1;
+}
+
+void SchedulePage::onTblWdgtVHeaderClicked(int index) {
+    onTblWdgtSchedulesClicked(index);
+}
+
+void SchedulePage::onBtnSchdlRemindClicked() {
+    std::stringstream ssTo, ssCnt;
+    const auto& allSchdls   = mpDB->getAllSchedules();
+
+    ssTo << "To: ";
+    std::string strPrefix;
+    for(int32_t iLoop = 0; iLoop < allSchdls.size(); iLoop++) {
+        Schedule::Ptr pSchdl= allSchdls[iLoop];
+
+        if(pSchdl->mStatus != Schedule::stringStatusToInt("Closed")) {
+            ssTo    << strPrefix << pSchdl->mReviewer.toStdString() << "; " << pSchdl->mAuditee.toStdString();
+            ssCnt   << "\n\nHi "
+                    << mpDB->getNameForCdsid(pSchdl->mReviewer) << ", "
+                    << mpDB->getNameForCdsid(pSchdl->mAuditee) << "\n"
+                    << "\tReview Name : " << pSchdl->mReviewName.toStdString() << " is not closed yet." << std::endl
+                    << "\tLast date for closing is " << pSchdl->mEndDate.toStdString() << "." << std::endl
+                    << "\tPls close ASAP.\n-"
+                    << mpDB->getNameForCdsid(pSchdl->mScheduler);
+        }
+        strPrefix   = "; ";
+    }
+
+    QFile file("../Images/mail.txt");
+    file.open(QFile::WriteOnly | QFile::Text);
+    QTextStream outF(&file);
+
+    outF << QString(ssTo.str().c_str())
+         << "\n\n" << "Subj: ISO Review Reminder - " << QDate::currentDate().toString("dd-MMM-yyyy")
+         << QString(ssCnt.str().c_str());
+    file.flush();
+    file.close();
+
+    QProcess *myProcess  = new QProcess();
+    myProcess->start("C:\\Windows\\System32\\notepad.exe", QStringList() << "..\\Images\\mail.txt");
 }
 //--------------------------------------------------------------------------------------------------------
 //                                      Handle Ui }}}
@@ -226,7 +288,7 @@ void SchedulePage::respInsertUpdateSchdl(QNetworkReply *pReply) {
     mbEyeOnDBUpdate = true;
 }
 
-void SchedulePage::onDBNotify() {
+void SchedulePage::onDBNotify(int32_t pUserInt, const QString& pUserStr) {
     if(!mbEyeOnDBUpdate) return;
 
     clearSchdlTable();

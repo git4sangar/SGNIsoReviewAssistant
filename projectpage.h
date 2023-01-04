@@ -39,12 +39,12 @@ class ProjectPage : public QObject, public DBNotifier
 {
     Q_OBJECT
 
+    enum class Cmds { CMD_NONE = 0, CMD_PROJ_BY_ID = 101, CMD_PROJ_BY_PM, CMD_PROJ_BY_LL6, CMD_PROJ_LIKE, CMD_TEAM_BY_PROJ_ID };
+    Cmds    intToEnum(int32_t iVal);
+    int32_t enumToInt(Cmds pEnum);
+
 private slots:
-    void respInsertNewProj(QNetworkReply *pReply);
-    void respUpdateProject(QNetworkReply *pReply);
-    void respGetAllProjs(QNetworkReply *pReply);
-    void respGetTeam(QNetworkReply *pReply);
-    void respDeleteProj(QNetworkReply *pReply);
+    void respSelectProjs(QNetworkReply *pReply);
 
 public:
     typedef std::shared_ptr<ProjectPage> Ptr;
@@ -60,26 +60,25 @@ public:
     void onTblWdgtVHeaderClicked(int index);
     void onBtnProjDeleteClicked();
     void onBtnProjClear();
-    void onDBNotify();
+    void onDBNotify(int32_t pUserCmd = 0, const QString& pUserParam = QString());
+    void listenToDBUpdate(bool bFlag) { mbEyeOnDBUpdate = bFlag; }
 
 private:
-    void            getAllProjsByPM();
     void            insertNewProject();
     void            updateProject();
     void            deleteAllTeam();
     void            clearProjTable();
     void            clearProjDetails();
-    void            getAllTeamsByProj(int32_t pProjId);
     void            populateProjTable(const QVector<Project::Ptr>& projs);
     void            populateTeamCdsids(const QVector<Team::Ptr>& teams);
     Project::Ptr    sanityCheck();
     QString         queryToInsertCdsids(int32_t iProjId, const QStringList& cdsids);
 
+    bool                    mbEyeOnDBUpdate;
     int32_t                 mCurRowIndex;
     ProjUiElements          *ui;
     DBInterface::Ptr        mpDB;
     QNetworkAccessManager   *mpHttpMgr;
-    QVector<Project::Ptr>   mProjs;
     QVector<Team::Ptr>      mTeams;
 };
 

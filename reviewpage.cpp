@@ -12,7 +12,7 @@ ReviewPage::ReviewPage(ReviewUiElements *pUi, DBInterface::Ptr pDB)
     : QObject(nullptr)
     , mCurRowIndex(-1)
     , mCurSchdlIndex(-1)
-    , mbEyeOnDBUpdate(true)
+    , mbEyeOnDBUpdate(false)
     , mIsReviewer(false)
     , mIsAuditee(false)
     , ui(pUi)
@@ -34,10 +34,11 @@ void ReviewPage::populateReviewList() {
         Schedule::Ptr pSchdl = allSchdls[iLoop];
         revwNames << pSchdl->mReviewName;
     }
+
     if(revwNames.size() > 0) {
-        mCurSchdlIndex = 0;
+        if(mCurSchdlIndex == -1) mCurSchdlIndex = 0;
         ui->cmBxRevwNames->addItems(revwNames);
-        ui->cmBxRevwNames->setCurrentIndex(0);  //triggers onCmBxRevwNamesIdxChanged
+        ui->cmBxRevwNames->setCurrentIndex(mCurSchdlIndex);  //triggers onCmBxRevwNamesIdxChanged
     }
 }
 
@@ -47,6 +48,7 @@ void ReviewPage::onCmBxRevwNamesIdxChanged(int index) {
 
     mCurSchdlIndex  = index;
     populateCommentsTable(pSchdl->mReviewId);
+    updateReviewStatus(pSchdl->mReviewId);
 }
 
 void ReviewPage::populateCommentsTable(int32_t iRevwId) {
@@ -54,23 +56,21 @@ void ReviewPage::populateCommentsTable(int32_t iRevwId) {
     const QVector<Comment::Ptr>& comments = mpDB->getCommentsByRevwId(iRevwId);
     if(comments.size() == 0) return;
 
+    QBrush  redColor        = QBrush(QColor(255, 0, 0));
     QStringList colHeaders  = Comment::getColNames();
+
     ui->tblWdgtCmnts->setRowCount(comments.size());
     ui->tblWdgtCmnts->setColumnCount(colHeaders.size());
     ui->tblWdgtCmnts->setHorizontalHeaderLabels(colHeaders);
 
-    int32_t noOfOpenCmnts   = 0;
-    QBrush  redColor        = QBrush(QColor(255, 0, 0));
     for(int32_t iRow = 0; iRow < comments.size(); iRow++) {
         Comment::Ptr pCmnt = comments[iRow];
-        if(pCmnt->mStatus == 0) noOfOpenCmnts++;
         QVector<QTableWidgetItem*> pCols = pCmnt->getFieldsAsWidgetItems();
         for(int32_t iCol = 0; iCol < pCols.size(); iCol++) {
             if(pCmnt->mStatus == 0) pCols[iCol]->setForeground(redColor);
             ui->tblWdgtCmnts->setItem(iRow, iCol, pCols[iCol]);
         }
     }
-    ui->lblRevwStatus->setText("Comments Open: " + QString::number(noOfOpenCmnts) + QString("/") + QString::number(comments.size()) );
 }
 
 void ReviewPage::onTblWdgtCmntsClicked(int row, int col) {
@@ -118,7 +118,7 @@ void ReviewPage::onBtnRevwAddClicked() {
     pCmnt->mStatus      = Schedule::stringStatusToInt("Open");
 
     QNetworkRequest request = mpDB->makeUpdateRequest();
-    connect(mpHttpMgr, &QNetworkAccessManager::finished, this, &ReviewPage::respInsertCmnt);
+    connect(mpHttpMgr, &QNetworkAccessManager::finished, this, &ReviewPage::respInsrtUpdtDel);
     mpHttpMgr->put(request, pCmnt->getInsertQuery().toUtf8());
 }
 
@@ -141,7 +141,7 @@ void ReviewPage::onBtnRevwUpdateClicked() {
     QString strUpdateQuery      = pExistingCmnt->getUpdateQuery(pToBeChanged);
 
     QNetworkRequest request = mpDB->makeUpdateRequest();
-    connect(mpHttpMgr, &QNetworkAccessManager::finished, this, &ReviewPage::respInsertCmnt);
+    connect(mpHttpMgr, &QNetworkAccessManager::finished, this, &ReviewPage::respInsrtUpdtDel);
     mpHttpMgr->put(request, strUpdateQuery.toUtf8());
 }
 
@@ -160,7 +160,7 @@ void ReviewPage::onBtnRevwDeleteClicked() {
     QString strDelQuery     = "DELETE FROM review WHERE id = " + QString::number(pCmnt->mId) + ";";
 
     QNetworkRequest request = mpDB->makeUpdateRequest();
-    connect(mpHttpMgr, &QNetworkAccessManager::finished, this, &ReviewPage::respInsertCmnt);
+    connect(mpHttpMgr, &QNetworkAccessManager::finished, this, &ReviewPage::respInsrtUpdtDel);
     mpHttpMgr->put(request, strDelQuery.toUtf8());
 }
 
@@ -177,14 +177,16 @@ void ReviewPage::onCmBxRevwCmntStatChanged(int index) {}
 //--------------------------------------------------------------------------------------------------------
 //                                      Network Responses {{{
 //--------------------------------------------------------------------------------------------------------
-void ReviewPage::respInsertCmnt(QNetworkReply *pReply) {
-    disconnect(mpHttpMgr, &QNetworkAccessManager::finished, this, &ReviewPage::respInsertCmnt);
+void ReviewPage::respInsrtUpdtDel(QNetworkReply *pReply) {
+    disconnect(mpHttpMgr, &QNetworkAccessManager::finished, this, &ReviewPage::respInsrtUpdtDel);
 
     const auto& resp    = QString(pReply->readAll());
     json root           = json::parse(resp.toStdString(), nullptr, false);
     if(root.is_discarded() || root["isOk"] == false) { ui->statusUpdater->updateStatus("Error updating schedule"); return; }
     ui->statusUpdater->updateStatus("Successfully updated/deleted entries in DB");
 
+    Schedule::Ptr pSchdl = mpDB->getScheduleByIndex(mCurSchdlIndex);
+    if(pSchdl) setUserStr(QString(pSchdl->mReviewId));
     mpDB->triggerDBPull();
     mbEyeOnDBUpdate = true;
 }
@@ -192,12 +194,37 @@ void ReviewPage::respInsertCmnt(QNetworkReply *pReply) {
 //--------------------------------------------------------------------------------------------------------
 //                                      Network Responses }}}
 //--------------------------------------------------------------------------------------------------------
-void ReviewPage::onDBNotify() {
+void ReviewPage::onDBNotify(int32_t pUserInt, const QString& pUserStr) {
     if(!mbEyeOnDBUpdate) return;
     ui->txtEdtRevwCmnt->clear();
 
     // This sets cmBxRevwNames and triggers onCmBxRevwNamesIdxChanged
     // onCmBxRevwNamesIdxChanged triggers populateCommentsTable
+    clearCommentsTable();
     populateReviewList();
     mbEyeOnDBUpdate = false;
+}
+
+void ReviewPage::updateReviewStatus(int32_t iRevwId) {
+    int32_t openCmnts = 0, iStatus = -1;
+    Comment::Ptr pCmnt;
+
+    const auto& pCmnts = mpDB->getCommentsByRevwId(iRevwId);
+    for(int32_t iLoop = 0; iLoop < pCmnts.size();  iLoop++) {
+        pCmnt  = pCmnts[iLoop];
+        if(pCmnt->mStatus == 0) openCmnts++;
+    }
+    if(!pCmnt) return;
+
+    (openCmnts == 0) ?
+        iStatus = Schedule::stringStatusToInt("Closed") :
+        iStatus = Schedule::stringStatusToInt("In Progress");
+
+    if(iStatus > 0) {
+        std::stringstream ss;
+        ss << "UPDATE schedule SET status = " << iStatus << " WHERE review_id = " << iRevwId << ";";
+        QNetworkRequest request = mpDB->makeUpdateRequest();
+        mpHttpMgr->put(request, QString(ss.str().c_str()).toUtf8());
+    }
+    ui->lblRevwStatus->setText("Comments Open: " + QString::number(openCmnts) + QString("/") + QString::number(pCmnts.size()) );
 }

@@ -43,7 +43,7 @@ struct Comment {
 
 struct Schedule {
     typedef     std::shared_ptr<Schedule> Ptr;
-    int32_t     mId, mReviewId, mProjId, mStatus;
+    int32_t     mId, mReviewId, mProjId, mStatus, mIsArchived;
     QString     mStartDate, mEndDate, mActualDate, mCloseDate;
     QString     mReviewName, mAuditee, mReviewer, mScheduler;
 

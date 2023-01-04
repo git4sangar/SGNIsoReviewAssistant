@@ -87,8 +87,8 @@ void DBInterface::onAllTeams(QNetworkReply *pReply) {
     }
 
     std::stringstream ss;
-    ss << "SELECT * FROM schedule WHERE proj_id IN (SELECT DISTINCT proj_id FROM project WHERE ll6 = \""
-       << mLL6Cdsid.toStdString() << "\");";
+    ss << "SELECT * FROM schedule WHERE is_archived = 0 AND proj_id IN (SELECT DISTINCT proj_id FROM project WHERE ll6 = \""
+       << mLL6Cdsid.toStdString() << "\") ORDER BY review_id ASC;";
     QNetworkRequest request = makeSelectRequest();
     connect(mpHttpMgr, &QNetworkAccessManager::finished, this, &DBInterface::onAllSchedules);
     mpHttpMgr->put(request, QString(ss.str().c_str()).toUtf8());
@@ -128,8 +128,11 @@ void DBInterface::onAllRevwCmnts(QNetworkReply *pReply) {
         if(pCmnt) mAllComments.push_back(pCmnt);
     }
 
-    for(int32_t iLoop = 0; iLoop < mpDBSubscribers.size(); iLoop++)
-        mpDBSubscribers[iLoop]->onDBNotify();
+    for(int32_t iLoop = 0; iLoop < mpDBSubscribers.size(); iLoop++) {
+        int32_t iUserInt    = mpDBSubscribers[iLoop]->getUserInt();
+        QString pUserStr    = mpDBSubscribers[iLoop]->getUserStr();
+        mpDBSubscribers[iLoop]->onDBNotify(iUserInt, pUserStr);
+    }
 }
 
 QNetworkRequest DBInterface::makeSelectRequest() {
@@ -237,4 +240,12 @@ QString DBInterface::getProjName(const QString& strProjId){
         if(mAllProjects[iLoop]->mProjId == iProjId)
             return mAllProjects[iLoop]->mName;
     return QString();
+}
+
+std::string DBInterface::getNameForCdsid(const QString& strCdsid) {
+    for(int32_t iLoop = 0; iLoop < mAllCdsids.size(); iLoop++) {
+        Cdsid::Ptr pCdsid   = mAllCdsids[iLoop];
+        if(pCdsid->mCdsid   == strCdsid) return pCdsid->mName.toStdString();
+    }
+    return std::string();
 }

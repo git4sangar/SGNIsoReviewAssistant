@@ -139,7 +139,7 @@
      </layout>
     </item>
     <item>
-     <widget class="QTabWidget" name="tabWidget">
+     <widget class="QTabWidget" name="tbWdgtMain">
       <property name="font">
        <font>
         <pointsize>12</pointsize>
@@ -152,7 +152,7 @@
        <enum>Qt::LeftToRight</enum>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>3</number>
       </property>
       <widget class="QWidget" name="tabTeam">
        <attribute name="title">
@@ -510,7 +510,7 @@
                   </font>
                  </property>
                  <property name="text">
-                  <string>Review Start</string>
+                  <string>Start</string>
                  </property>
                 </widget>
                </item>
@@ -523,7 +523,7 @@
                    <second>0</second>
                    <year>2022</year>
                    <month>12</month>
-                   <day>25</day>
+                   <day>19</day>
                   </datetime>
                  </property>
                  <property name="displayFormat">
@@ -531,10 +531,6 @@
                  </property>
                 </widget>
                </item>
-              </layout>
-             </item>
-             <item>
-              <layout class="QHBoxLayout" name="horizontalLayout_11">
                <item>
                 <widget class="QLabel" name="label_2">
                  <property name="font">
@@ -543,7 +539,7 @@
                   </font>
                  </property>
                  <property name="text">
-                  <string>Review End</string>
+                  <string>End</string>
                  </property>
                 </widget>
                </item>
@@ -556,13 +552,26 @@
                    <second>0</second>
                    <year>2023</year>
                    <month>1</month>
-                   <day>7</day>
+                   <day>1</day>
                   </datetime>
                  </property>
                  <property name="displayFormat">
                   <string>d/M/yyyy</string>
                  </property>
                 </widget>
+               </item>
+               <item>
+                <spacer name="horizontalSpacer_7">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
                </item>
               </layout>
              </item>
@@ -622,6 +631,9 @@
                </attribute>
               </widget>
              </item>
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_4"/>
+             </item>
             </layout>
            </item>
           </layout>
@@ -670,9 +682,9 @@
                 </spacer>
                </item>
                <item>
-                <widget class="QPushButton" name="btnSchdlDelete">
+                <widget class="QPushButton" name="btnSchdlArchive">
                  <property name="text">
-                  <string>Delete</string>
+                  <string>Archive</string>
                  </property>
                 </widget>
                </item>
@@ -680,6 +692,13 @@
                 <widget class="QPushButton" name="btnSchdlRemind">
                  <property name="text">
                   <string>Remind</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="btnSchdlDelete">
+                 <property name="text">
+                  <string>Delete</string>
                  </property>
                 </widget>
                </item>
@@ -889,7 +908,7 @@
               <item>
                <widget class="QPushButton" name="btnRepQuery">
                 <property name="text">
-                 <string>PushButton</string>
+                 <string>Query DB</string>
                 </property>
                </widget>
               </item>

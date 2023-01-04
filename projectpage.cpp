@@ -7,6 +7,7 @@
 
 ProjectPage::ProjectPage(ProjUiElements *pUi, DBInterface::Ptr pDB)
     : QObject(nullptr)
+    , mbEyeOnDBUpdate(false)
     , mCurRowIndex(-1)
     , ui(pUi)
     , mpDB(pDB)
@@ -36,15 +37,14 @@ void ProjectPage::onBtnProjGetDetailsClicked() {
     QString strLL6          = ui->lnEdtProjLL6->text().toUpper();
     if(!strProjId.isEmpty()) iProjId = strProjId.toInt();
 
-         if(iProjId > 0)            ss << "SELECT * FROM project WHERE proj_id = " << iProjId << " ORDER BY proj_id ASC;";
-    else if(!strProjName.isEmpty()) ss << "SELECT * FROM project WHERE name LIKE \"%" << strProjName.toStdString() << "%\" ORDER BY proj_id ASC;";
-    else if(!strPM.isEmpty())       ss << "SELECT * FROM project WHERE pm = \"" << strPM.toStdString() << "\" ORDER BY proj_id ASC;";
-    else if(!strLL6.isEmpty())      ss << "SELECT * FROM project WHERE ll6 = \"" << strLL6.toStdString() << "\" ORDER BY proj_id ASC;";
+         if(iProjId > 0)            { setUserInt(enumToInt(Cmds::CMD_PROJ_BY_ID));  setUserStr(strProjId); }
+    else if(!strPM.isEmpty())       { setUserInt(enumToInt(Cmds::CMD_PROJ_BY_PM));  setUserStr(strPM); }
+    else if(!strLL6.isEmpty())      { setUserInt(enumToInt(Cmds::CMD_PROJ_BY_LL6)); setUserStr(strLL6); }
+    else if(!strProjName.isEmpty()) { setUserInt(enumToInt(Cmds::CMD_PROJ_LIKE));   setUserStr(strProjName); }
     else ui->statusUpdater->updateStatus("Pls Enter Proj Id or Name or PM or LL6 to get details.");
 
-     QNetworkRequest request = mpDB->makeSelectRequest();
-     connect(mpHttpMgr, &QNetworkAccessManager::finished, this, &ProjectPage::respGetAllProjs);
-     mpHttpMgr->put(request, QString(ss.str().c_str()).toUtf8());
+    mbEyeOnDBUpdate = true;
+    mpDB->triggerDBPull();
 }
 
 void ProjectPage::onBtnProjSubmitClicked() {
@@ -58,11 +58,14 @@ void ProjectPage::insertNewProject() {
 
     std::stringstream ss;
     std::string delimiter   = "$";
-    ss << pProj->getInsertQuery().toStdString();
-    ss << delimiter << queryToInsertCdsids(pProj->mProjId, pProj->mTeamCdsids).toStdString();
+    ss  << "SELECT * FROM project WHERE proj_id = " << pProj->mProjId << ";";
+    ss  << delimiter;
+    ss  << pProj->getInsertQuery().toStdString();
+    ss  << delimiter;
+    ss  << queryToInsertCdsids(pProj->mProjId, pProj->mTeamCdsids).toStdString();
 
     QNetworkRequest request = mpDB->makeSelectAndUpdateReq(false);
-    connect(mpHttpMgr, &QNetworkAccessManager::finished, this, &ProjectPage::respInsertNewProj);
+    connect(mpHttpMgr, &QNetworkAccessManager::finished, this, &ProjectPage::respSelectProjs);
     mpHttpMgr->put(request, QString(ss.str().c_str()).toUtf8());
 }
 
@@ -71,7 +74,7 @@ void ProjectPage::updateProject() {
 
     Project::Ptr pToChange  = sanityCheck();
     if(!pToChange) return;
-    Project::Ptr pExisting  = mProjs[mCurRowIndex];
+    Project::Ptr pExisting  = mpDB->getAllProjects()[mCurRowIndex];
     if(pExisting->mPM != mpDB->getCurUserCdsid() && pExisting->mLL6 != mpDB->getCurUserCdsid())
         { ui->statusUpdater->updateStatus("Only PM or LL6 can update"); return; }
 
@@ -84,13 +87,13 @@ void ProjectPage::updateProject() {
        << queryToInsertCdsids(pExisting->mProjId, pToChange->mTeamCdsids).toStdString();
 
     QNetworkRequest request = mpDB->makeUpdateRequest();
-    connect(mpHttpMgr, &QNetworkAccessManager::finished, this, &ProjectPage::respUpdateProject);
+    connect(mpHttpMgr, &QNetworkAccessManager::finished, this, &ProjectPage::respSelectProjs);
     mpHttpMgr->put(request, QString(ss.str().c_str()).toUtf8());
 }
 
 void ProjectPage::populateProjTable(const QVector<Project::Ptr>& projs) {
-    if(projs.size() == 0) return;
     clearProjTable();
+    if(projs.size() == 0) return;
 
     QStringList colHeaders  = Project::getColNames();
     ui->tblWdgtProjects->setRowCount(projs.size());
@@ -112,8 +115,9 @@ void ProjectPage::onTblWdgtProjectsClicked(int row, int column) {
     int32_t iProjId         = strText.toInt();
 
     Project::Ptr pProj;
-    for(int32_t iLoop = 0; iLoop < mProjs.size(); iLoop++) {
-        if(mProjs[iLoop]->mProjId == iProjId) { pProj = mProjs[iLoop]; break; }
+    const auto&  projs      = mpDB->getAllProjects();
+    for(int32_t iLoop = 0; iLoop < projs.size(); iLoop++) {
+        if(projs[iLoop]->mProjId == iProjId) { pProj = projs[iLoop]; break; }
     }
 
     if(pProj) {
@@ -124,7 +128,11 @@ void ProjectPage::onTblWdgtProjectsClicked(int row, int column) {
     }
 
     ui->btnProjSubmit->setText("Update");
-    getAllTeamsByProj(pProj->mProjId);
+
+    setUserInt(enumToInt(Cmds::CMD_TEAM_BY_PROJ_ID));
+    setUserStr(QString::number(pProj->mProjId));
+    mbEyeOnDBUpdate = true;
+    mpDB->triggerDBPull();
 }
 
 void ProjectPage::onTblWdgtVHeaderClicked(int index) {
@@ -198,7 +206,7 @@ void ProjectPage::onBtnProjDeleteClicked() {
     }
 
     QString curUser     = mpDB->getCurUserCdsid();
-    Project::Ptr pProj  = mProjs[mCurRowIndex];
+    Project::Ptr pProj  = mpDB->getAllProjects()[mCurRowIndex];
     if(pProj->mPM != curUser && pProj->mLL6 != curUser) {
         ui->statusUpdater->updateStatus("Only PM or LL6 can delete");
         return;
@@ -211,8 +219,10 @@ void ProjectPage::onBtnProjDeleteClicked() {
         << "DELETE FROM project WHERE proj_id = " << pProj->mProjId << ";"
         << delimiter
         << "DELETE FROM team WHERE proj_id = " << pProj->mProjId << ";";
+
+    clearProjDetails();
     QNetworkRequest request = mpDB->makeSelectAndUpdateReq(true);
-    connect(mpHttpMgr, &QNetworkAccessManager::finished, this, &ProjectPage::respDeleteProj);
+    connect(mpHttpMgr, &QNetworkAccessManager::finished, this, &ProjectPage::respSelectProjs);
     mpHttpMgr->put(request, QString(ss.str().c_str()).toUtf8());
 }
 
@@ -228,84 +238,74 @@ void ProjectPage::onBtnProjDeleteClicked() {
 //                                      Network Responses {{{
 //--------------------------------------------------------------------------------------------------------
 
-void ProjectPage::respInsertNewProj(QNetworkReply *pReply) {
-    disconnect(mpHttpMgr, &QNetworkAccessManager::finished, this, &ProjectPage::respInsertNewProj);
+void ProjectPage::respSelectProjs(QNetworkReply *pReply) {
+    disconnect(mpHttpMgr, &QNetworkAccessManager::finished, this, &ProjectPage::respSelectProjs);
 
     const auto& resp    = QString(pReply->readAll());
     json root           = json::parse(resp.toStdString(), nullptr, false);
     if(root.is_discarded() || root["isOk"] == false) {
-        ui->statusUpdater->updateStatus("Could not create record. Record already exists?");
+        ui->statusUpdater->updateStatus("Could not update/delete. Record already exists?");
         return;
     }
-    ui->statusUpdater->updateStatus("Updated New Project");
-    getAllProjsByPM();
-}
 
-void ProjectPage::respUpdateProject(QNetworkReply *pReply) {
-    disconnect(mpHttpMgr, &QNetworkAccessManager::finished, this, &ProjectPage::respUpdateProject);
+    ui->statusUpdater->updateStatus("Successfully updated/deleted entries in DB");
+    setUserInt(enumToInt(Cmds::CMD_PROJ_BY_PM));
+    setUserStr(ui->lnEdtProjPM->text().toUpper());
 
-    const auto& resp    = QString(pReply->readAll());
-    json root           = json::parse(resp.toStdString(), nullptr, false);
-    if(root.is_discarded() || root["isOk"] == false) {
-        ui->statusUpdater->updateStatus("Error updating project");
-        return;
-    }
-    ui->statusUpdater->updateStatus("Updated project");
+    mbEyeOnDBUpdate = true;
     mpDB->triggerDBPull();
 }
 
-void ProjectPage::respGetAllProjs(QNetworkReply *pReply) {
-    disconnect(mpHttpMgr, &QNetworkAccessManager::finished, this, &ProjectPage::respGetAllProjs);
+void ProjectPage::onDBNotify(int32_t pUserCmd, const QString& pUserParam) {
+    if(!mbEyeOnDBUpdate)    return;
+    QVector<Project::Ptr>   projs;
+    QVector<Team::Ptr>      teams;
+    int32_t                 iProjId = 0;
 
-    const auto& resp    = QString(pReply->readAll());
-    json root           = json::parse(resp.toStdString(), nullptr, false);
-    if(root.is_discarded() || !root["isOk"]) { ui->statusUpdater->updateStatus("No projects"); return; }
+    mbEyeOnDBUpdate = false;
+    switch(intToEnum(pUserCmd)) {
+    case Cmds::CMD_PROJ_BY_ID:
+        iProjId = pUserParam.toInt();
+        for(const auto& proj : mpDB->getAllProjects())
+            if(proj->mProjId == iProjId)
+                projs.push_back(proj);
+        populateProjTable(projs);
+        break;
 
-    QVector<Project::Ptr> allProjs;
-    if(root["rows"].is_array()) for(const auto& row :root["rows"]) {
-        Project::Ptr pProj  = Project::fromJson(row);
-        allProjs.push_back(pProj);
+    case Cmds::CMD_PROJ_BY_PM:
+        for(const auto& proj : mpDB->getAllProjects())
+            if(proj->mPM == pUserParam)
+                projs.push_back(proj);
+        populateProjTable(projs);
+        break;
+
+    case Cmds::CMD_PROJ_BY_LL6:
+        for(const auto& proj : mpDB->getAllProjects())
+            if(proj->mLL6 == pUserParam)
+                projs.push_back(proj);
+        populateProjTable(projs);
+        break;
+
+    case Cmds::CMD_PROJ_LIKE:
+        for(const auto& proj : mpDB->getAllProjects())
+            if(proj->mName.contains(pUserParam))
+                projs.push_back(proj);
+        populateProjTable(projs);
+        break;
+
+    case Cmds::CMD_TEAM_BY_PROJ_ID:
+        iProjId = pUserParam.toInt();
+        for(const auto& team : mpDB->getAllTeams())
+            if(team->mProjId == iProjId)
+                teams.push_back(team);
+        populateTeamCdsids(teams);
+        break;
+
+    case Cmds::CMD_NONE:
+        break;
     }
-    if(allProjs.size() > 0) {
-        mProjs.clear();
-        mProjs = allProjs;
-        populateProjTable(allProjs);
-    }
-    mpDB->triggerDBPull();
+    clearParams();
 }
-
-void ProjectPage::respGetTeam(QNetworkReply *pReply) {
-    disconnect(mpHttpMgr, &QNetworkAccessManager::finished, this, &ProjectPage::respGetTeam);
-
-    const auto& resp    = QString(pReply->readAll());
-    json root           = json::parse(resp.toStdString(), nullptr, false);
-    if(root.is_discarded() || !root["isOk"]) return;
-
-    QVector<Team::Ptr> teams;
-    if(root["rows"].is_array()) for(const auto& row :root["rows"]) {
-        Team::Ptr pTeam  = Team::fromJson(row);
-        teams.push_back(pTeam);
-    }
-    if(teams.size() > 0) { mTeams.clear(); mTeams = teams; }
-    populateTeamCdsids(teams);
-}
-
-void ProjectPage::respDeleteProj(QNetworkReply *pReply) {
-    disconnect(mpHttpMgr, &QNetworkAccessManager::finished, this, &ProjectPage::respDeleteProj);
-
-    const auto& resp    = QString(pReply->readAll());
-    json root           = json::parse(resp.toStdString(), nullptr, false);
-    if(root.is_discarded() || !root["isOk"]) {
-        ui->statusUpdater->updateStatus("Could not delete project");
-        return;
-    }
-    ui->statusUpdater->updateStatus("Project deleted successfully");
-    clearProjTable();
-    getAllProjsByPM();
-    mpDB->triggerDBPull();
-}
-
-void ProjectPage::onDBNotify() {}
 //--------------------------------------------------------------------------------------------------------
 //                                      Network Responses }}}
 //--------------------------------------------------------------------------------------------------------
@@ -317,14 +317,6 @@ void ProjectPage::onDBNotify() {}
 //--------------------------------------------------------------------------------------------------------
 //                                      Utils {{{
 //--------------------------------------------------------------------------------------------------------
-void ProjectPage::getAllTeamsByProj(int32_t pProjId) {
-    std::stringstream ss;
-
-    ss << "SELECT * FROM team WHERE proj_id = " << pProjId << ";";
-    QNetworkRequest request = mpDB->makeSelectRequest();
-    connect(mpHttpMgr, &QNetworkAccessManager::finished, this, &ProjectPage::respGetTeam);
-    mpHttpMgr->put(request, QString(ss.str().c_str()).toUtf8());
-}
 
 QString ProjectPage::queryToInsertCdsids(int32_t iProjId, const QStringList& cdsids) {
     if(cdsids.size() == 0 || iProjId <= 0) return QString();
@@ -340,14 +332,27 @@ QString ProjectPage::queryToInsertCdsids(int32_t iProjId, const QStringList& cds
     return QString(ss.str().c_str());
 }
 
-void ProjectPage::getAllProjsByPM() {
-    std::stringstream ss;
-    std::string strPM   = ui->lnEdtProjPM->text().toUpper().toStdString();
+ProjectPage::Cmds ProjectPage::intToEnum(int32_t iVal) {
+    switch(iVal) {
+        case 101: return Cmds::CMD_PROJ_BY_ID;
+        case 102: return Cmds::CMD_PROJ_BY_PM;
+        case 103: return Cmds::CMD_PROJ_BY_LL6;
+        case 104: return Cmds::CMD_PROJ_LIKE;
+        case 105: return Cmds::CMD_TEAM_BY_PROJ_ID;
+    }
+    return Cmds::CMD_NONE;
+}
 
-    ss << "SELECT * FROM project WHERE pm = \"" << strPM << "\" ORDER BY proj_id ASC;";
-    QNetworkRequest request = mpDB->makeSelectRequest();
-    connect(mpHttpMgr, &QNetworkAccessManager::finished, this, &ProjectPage::respGetAllProjs);
-    mpHttpMgr->put(request, QString(ss.str().c_str()).toUtf8());
+int32_t ProjectPage::enumToInt(ProjectPage::Cmds pEnum) {
+    switch(pEnum) {
+        case Cmds::CMD_PROJ_BY_ID:  return 101;
+        case Cmds::CMD_PROJ_BY_PM:  return 102;
+        case Cmds::CMD_PROJ_BY_LL6: return 103;
+        case Cmds::CMD_PROJ_LIKE:   return 104;
+        case Cmds::CMD_TEAM_BY_PROJ_ID:  return 105;
+        case Cmds::CMD_NONE:        return 0;
+    }
+    return -1;
 }
 //--------------------------------------------------------------------------------------------------------
 //                                      Utils }}}

@@ -33,7 +33,6 @@ MainWindow::MainWindow(QWidget *parent)
     mpDB->subscribeToDBNotification(mpSchdlPage);
     mpRevwPage      = std::make_shared<ReviewPage>(prepareRevwUIElements(), mpDB);
     mpDB->subscribeToDBNotification(mpRevwPage);
-    mpDB->triggerDBPull();
 
     const auto tblVHeaderProj = ui->tblWdgtProjects->verticalHeader();
     connect(tblVHeaderProj, &QHeaderView::sectionClicked, this, &MainWindow::on_tblWdgtProjects_vHeaderClicked);
@@ -43,6 +42,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     const auto tblVHeaderCmnt = ui->tblWdgtCmnts->verticalHeader();
     connect(tblVHeaderCmnt, &QHeaderView::sectionClicked, this, &MainWindow::on_tblWdgtCmnts_vHeaderClicked);
+
+    //  Now, triggers on_tbWdgtMain_currentChanged so that DBPull gets triggered
+    ui->tbWdgtMain->setCurrentIndex(2);
 }
 
 MainWindow::~MainWindow() {
@@ -50,8 +52,21 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::on_lnEdtLL6_textChanged(const QString &arg1) {
-    if(mpDB->isValidCdsid(arg1)) mpDB->setLL6Cdsid(arg1);
-    else mpStatusUpdater->updateStatus("Invalid LL6 cdsid");
+    ui->lnEdtLL6->setText(arg1.toUpper());
+    if(mpDB->isValidCdsid(arg1)) {
+        mpStatusUpdater->updateStatus("");
+        mpDB->setLL6Cdsid(arg1);
+        ui->lnEdtProjLL6->setText(arg1.toUpper());
+    } else mpStatusUpdater->updateStatus("Invalid cdsid");
+}
+
+void MainWindow::on_tbWdgtMain_currentChanged(int index) {
+    switch(index) {
+        case 0: mpProjPage->listenToDBUpdate(true); break;
+        case 1: mpSchdlPage->listenToDBUpdate(true);break;
+        case 2: mpRevwPage->listenToDBUpdate(true); break;
+    }
+    mpDB->triggerDBPull();
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -103,6 +118,7 @@ SchdlUiElements* MainWindow::prepareSchdlUIElements() {
     pUi->dtEdtSchdlStartDate= ui->dtEdtSchdlStartDate;
     pUi->dtEdtSchdlEndDate  = ui->dtEdtSchdlEndDate;
     pUi->btnSchdlNew        = ui->btnSchdlNew;
+    pUi->btnSchdlArchive    = ui->btnSchdlArchive;
     pUi->btnSchdlUpdate     = ui->btnSchdlUpdate;
     pUi->btnSchdlDelete     = ui->btnSchdlDelete;
     pUi->btnSchdlRemind     = ui->btnSchdlRemind;
@@ -116,6 +132,7 @@ void MainWindow::on_btnSchdlNew_clicked()    { mpSchdlPage->onBtnSchdlNewClicked
 void MainWindow::on_btnSchdlUpdate_clicked() { mpSchdlPage->onBtnSchdlUpdateClicked(); }
 void MainWindow::on_btnSchdlDelete_clicked() { mpSchdlPage->onBtnSchdlDeleteClicked(); }
 void MainWindow::on_btnSchdlRemind_clicked() { mpSchdlPage->onBtnSchdlRemindClicked(); }
+void MainWindow::on_btnSchdlArchive_clicked(){ mpSchdlPage->onBtnSchdlArchiveClicked(); }
 void MainWindow::on_tblWdgtSchdlLookup_cellClicked(int row, int column) { mpSchdlPage->onTblWdgtSchdlLookupClicked(row, column); }
 void MainWindow::on_tblWdgtSchedules_cellClicked(int row, int column) { mpSchdlPage->onTblWdgtSchedulesClicked(row, column); }
 void MainWindow::on_tblWdgtSchedules_vHeaderClicked(int index) { mpSchdlPage->onTblWdgtVHeaderClicked(index); }
@@ -154,7 +171,5 @@ void MainWindow::on_tblWdgtCmnts_vHeaderClicked(int index)          { mpRevwPage
 //--------------------------------------------------------------------------------------------------------
 //                          Review Page }}}
 //--------------------------------------------------------------------------------------------------------
-
-
 
 
